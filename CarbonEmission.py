@@ -1,15 +1,19 @@
 import streamlit as st
 import pandas as pd
 
-
+if "energy_emission" not in st.session_state:
+    st.session_state["energy_emission"] = None
 
 st.title("Carbon Footprint Assessment made quick and accurate")
 st.write("Obtain the most accurate data with our carbon footprint monitotring tool, supported and develope by our commited Climate team. Our web application calcuates the carbon footprint based on the most important factors including Energy Usage, Waste and Business Travles of your company.  ")
+
 st.subheader("Energy Usage")
 st.write("Please answer the following questions and type your answers in euros." )
+
 electricity = st.text_input("What is your average monthly electricity bill?")
 gass = st.text_input("What is your average monthly natural gas bill?")
 fuel = st.text_input("What is your avarage monthly fuel bill for transportation?")
+
 
 if st.button("Calculate Energy Emission"):
     
@@ -19,11 +23,10 @@ if st.button("Calculate Energy Emission"):
             gass = float(gass)
             fuel = float(fuel)
 
-
             energy_emission = electricity * 12 * 0.0005 + gass * 12 * 0.0053 + fuel * 12 * 2.23
-            st.success(f'Your carbon emission from energy usage is {energy_emission:.2f} kgCO2. You can see the full report and solutions here.')
-    
-
+            st.session_state["energy_emission"] = energy_emission
+            st.success(f'Your carbon emission from energy usage is {energy_emission:.2f} kgCO2. You can see the full report and solutions [here](energyusage).')
+            
         except ValueError:
             st.error("Please enter valid numbers for all inputs.")
     else:
