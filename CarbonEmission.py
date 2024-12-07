@@ -1,8 +1,70 @@
 import streamlit as st
+import os
 import pandas as pd
 
-if "energy_emission" not in st.session_state:
-    st.session_state["energy_emission"] = None
+#class for storing and managing client data
+class CarbonFootprint:
+    def __init__(self,client_id):
+        self.client_id = client_id
+        self.energy_emission = None
+        self.waste_emission = None
+        self.travel_emission = None
+    
+    def calculate_energy_emission(self, electricity, gas, fuel):
+        try:
+            self.energy_emission = electricity * 12 * 0.0005 + gass * 12 * 0.0053 + fuel * 12 * 2.23
+            return self.energy_emission
+        except ValueError:
+            return None
+        
+    def calculate_waste_emission(self, waste_generated, waste_recycled):
+        try:
+            self.waste_emission = waste_generate * 12 * (0.57 - waste_recycle)
+            return self.waste_emission
+        except ValueError:
+            return None
+        
+    def calculate_travel_emission(self, travel_km, fuel_efficiency):
+        try:
+            self.travel_emission = travel_km * (1 / fuel_efficiency) * 2.31
+            return self.travel_emission
+        except ValueError:
+            return None
+        
+    def calculate_total_emission(self):
+        if self.energy_emission is not None and self.waste_emission is not None and self.travel_emission is not None:
+            return self.energy_emission + self.waste_emission + self.travel_emission
+        else:
+            return None
+        
+#class for generating and saving reports
+class ReportGnerator:
+    def __init__(self):
+        self.columns = ["clinet_id","energy_emission", "waste_emission", "travel_emission", "total_emission", "report_date"]
+        self.file_path = "client_data.csv"
+        self._ensure_file_exists()
+
+    def _ensure_file_exist(self):
+        if not os.path.exists(self.file_path):
+          df = pd.DataFrame(columns = self.columns)  
+          df.to_csv(self.file_path, index = False)
+
+    def save_report(self, carbon_footprint):
+        total_emission = carbon_footprint.calculate_total_emission
+        if total_emission is not None:
+            client_data = [
+                carbon_footprint.client_id,
+                carbon_footprint.enerrgy_emission,
+                carbon_footprint.waste_emission,
+                carbon_footprint.travel_emission,
+                total_emission]
+            df = pd.read_csv(self.file_path)
+            df = df.append(pd.Series(client_data, index=self.columns), ignore_index = True)
+            df.to_csv(self.file_path, index = False)
+        else:
+            print("Incomplete data, cannot generate report.")
+
+
 
 st.title("Carbon Footprint Assessment made quick and accurate")
 st.write("Obtain the most accurate data with our carbon footprint monitotring tool, supported and develope by our commited Climate team. Our web application calcuates the carbon footprint based on the most important factors including Energy Usage, Waste and Business Travles of your company.  ")
@@ -25,7 +87,7 @@ if st.button("Calculate Energy Emission"):
 
             energy_emission = electricity * 12 * 0.0005 + gass * 12 * 0.0053 + fuel * 12 * 2.23
             st.session_state["energy_emission"] = energy_emission
-            st.success(f'Your carbon emission from energy usage is {energy_emission:.2f} kgCO2. You can see the full report and solutions [here](energyusage).')
+            st.success(f'Your carbon emission from energy usage is {energy_emission:.2f} kgCO2. You can see the full report and solutions here.')
             
         except ValueError:
             st.error("Please enter valid numbers for all inputs.")
