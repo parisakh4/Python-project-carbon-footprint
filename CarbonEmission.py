@@ -3,10 +3,6 @@ import os
 import pandas as pd
 import uuid
 
-#Generating Id for client
-if "client_id" not in st.session_state:
-    st.session_state["client_id"] = str(uuid.uuid4())
-    st.sidebar.write(f"Your Client ID: {st.session_state['client_id']}")
 
 #class for storing and managing client data
 class CarbonFootprint:
@@ -55,30 +51,40 @@ class ReportGnerator:
           df = pd.DataFrame(columns = self.columns)  
           df.to_csv(self.file_path, index = False)
 
-    def save_report(self, carbon_footprint):
-        total_emission = carbon_footprint.calculate_total_emission
+    def save_report(self, client_data):
+        total_emission = client_data.get("total_emission")  # Get the total emission from the dictionary
         if total_emission is not None:
-            client_data = [
-                carbon_footprint.client_id,
-                carbon_footprint.enerrgy_emission,
-                carbon_footprint.waste_emission,
-                carbon_footprint.travel_emission,
-                total_emission]
+            # Read the existing data from the CSV file
             df = pd.read_csv(self.file_path)
-            df = df.append(pd.Series(client_data, index=self.columns), ignore_index = True)
-            df.to_csv(self.file_path, index = False)
+            
+            # Convert the client_data dictionary into a DataFrame and append it to the existing DataFrame
+            new_data = pd.DataFrame([client_data])
+            df = pd.concat([df, new_data], ignore_index=True)
+            
+            # Save the updated DataFrame back to the CSV file
+            df.to_csv(self.file_path, index=False)
         else:
             print("Incomplete data, cannot generate report.")
 
 def main():
+
+    #Generating Id for client
+    if "client_id" not in st.session_state:
+        st.session_state["client_id"] = str(uuid.uuid4())
+        st.sidebar.write(f"Your Client ID: {st.session_state['client_id']}")
 
     st.title("Carbon Footprint Assessment made quick and accurate")
     st.write("Obtain the most accurate data with our carbon footprint monitotring tool, supported and develope by our commited Climate team. Our web application calcuates the carbon footprint based on the most important factors including Energy Usage, Waste and Business Travles of your company.  ")
     
     #creating a new instance for the report generator
     report_generator = ReportGnerator()
-    client_id = "001"
+    client_id = st.session_state["client_id"]
     carbon_footprint = CarbonFootprint(client_id)
+
+    if "carbon_footprint" not in st.session_state:
+        st.session_state["carbon_footprint"] = CarbonFootprint(st.session_state["client_id"])
+
+    carbon_footprint = st.session_state["carbon_footprint"]
 
     #energy emission calculation
     st.subheader("Energy Usage")
@@ -97,7 +103,8 @@ def main():
                 gass = float(gass)
                 fuel = float(fuel)
 
-                carbon_footprint.calculate_energy_emission(electricity, gass, fuel)
+                energy_emission = carbon_footprint.calculate_energy_emission(electricity, gass, fuel)
+                st.session_state["energy_emission"] = energy_emission #storing in session state
                 st.success(f"Energy carbon emission: {carbon_footprint.energy_emission:.2f} kgCO2/year.")
                 
                 #comparing to benchmark
@@ -125,7 +132,8 @@ def main():
                 waste_generate = float(waste_generate)
                 waste_recycle = float(waste_recycle)
 
-                carbon_footprint.calculate_waste_emission(waste_generate, waste_recycle)
+                waste_emission = carbon_footprint.calculate_waste_emission(waste_generate, waste_recycle)
+                st.session_state["waste_emission"] = waste_emission #storing 
                 st.success(f"Waste carbon emission: {carbon_footprint.waste_emission:.2f} kgCO2/year.")
 
                 # Benchmark Comparison
@@ -143,17 +151,18 @@ def main():
 
     #travel emission calculation
     st.subheader("Business Travel")
-    travel = st.text_input("How many kilometers do your employees travel per year for business purposes?")
+    travel_km = st.text_input("How many kilometers do your employees travel per year for business purposes?")
     fuel_efficiency= st.text_input("What is the average fuel efficiency of the vehicles used for business travel in liters per 100 kilometers?")
 
     if st.button("Calculate Travel Emission"):
         
         if travel_km.strip() and fuel_efficiency.strip():
             try:
-                travel_km = float(travel)
+                travel_km = float(travel_km)
                 fuel_efficiency = float(fuel_efficiency)
 
-                carbon_footprint.calculate_travel_emission(travel_km, fuel_efficiency)
+                travel_emission = carbon_footprint.calculate_travel_emission(travel_km, fuel_efficiency)
+                st.session_state["travel_emission"] = travel_emission 
                 st.success(f'Your carbon emission from business travels is {carbon_footprint.travel_emission:.2f} kgCO2. View the full review and solutions here. ')
         
                 #benchmark comparison
@@ -168,11 +177,22 @@ def main():
         else:
             st.warning("Please fill in all fields.")
 
-    #Save and display the final report
-    if st.button("Save Report"):
-        report_generator.save_report(carbon_footprint)
+    total_emission = carbon_footprint.calculate_total_emission()
+    st.session_state["total_emission"] = total_emission  # Store total emission
 
-    st.success(f'Total Carbon Footprint: {carbon_footprint.calculate_total_emission()}')
+    client_data = {
+    "client_id": st.session_state["client_id"], 
+    "energy_emission": carbon_footprint.energy_emission,
+    "waste_emission": carbon_footprint.waste_emission,
+    "travel_emission": carbon_footprint.travel_emission,
+    "total_emission": total_emission 
+    }
+    
+    #Save and display the final report
+    if st.button("Display and Save Report"):
+        report_generator.save_report(client_data)
+
+        st.success(f'Total Carbon Footprint: {total_emission}')
 
 if __name__ == "__main__":
     main()
