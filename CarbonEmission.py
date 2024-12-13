@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import pandas as pd
 import uuid
+from datetime import datetime
 
 
 #class for storing and managing client data
@@ -65,14 +66,23 @@ class ReportGnerator:
             df.to_csv(self.file_path, index=False)
         else:
             print("Incomplete data, cannot generate report.")
+    
+    def load_all_reports(self):
+        return pd.read_csv(self.file_path)
 
 def main():
 
     #Generating Id for client
     if "client_id" not in st.session_state:
         st.session_state["client_id"] = str(uuid.uuid4())
-        st.sidebar.write(f"Your Client ID: {st.session_state['client_id']}")
-
+        
+    #Set active client ID for tracking
+    if "active_client_id" not in st.session_state:
+        st.session_state["active_client_id"] = st.session_state["client_id"]
+        
+    #Shorten the displayed client ID
+    short_id = st.session_state["client_id"][:8]
+    st.sidebar.write(f"Your Client ID: {short_id}")
     st.title("Carbon Footprint Assessment made quick and accurate")
     st.write("Obtain the most accurate data with our carbon footprint monitotring tool, supported and develope by our commited Climate team. Our web application calcuates the carbon footprint based on the most important factors including Energy Usage, Waste and Business Travles of your company.  ")
     
@@ -180,19 +190,56 @@ def main():
     total_emission = carbon_footprint.calculate_total_emission()
     st.session_state["total_emission"] = total_emission  # Store total emission
 
-    client_data = {
-    "client_id": st.session_state["client_id"], 
-    "energy_emission": carbon_footprint.energy_emission,
-    "waste_emission": carbon_footprint.waste_emission,
-    "travel_emission": carbon_footprint.travel_emission,
-    "total_emission": total_emission 
-    }
+    
+    if total_emission is not None and carbon_footprint.energy_emission is not None:
+
+        client_data = {
+        "client_id": st.session_state["active_client_id"], 
+        "energy_emission": carbon_footprint.energy_emission,
+        "waste_emission": carbon_footprint.waste_emission,
+        "travel_emission": carbon_footprint.travel_emission,
+        "total_emission": total_emission,
+        "report_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
     
     #Save and display the final report
     if st.button("Display and Save Report"):
         report_generator.save_report(client_data)
 
         st.success(f'Total Carbon Footprint: {total_emission}')
+    
+    #visualization
+    st.subheader("Client Emissions Overview and Comparison")
+
+    all_reports = report_generator.load_all_reports()
+    # Remove rows where any emission data is missing
+    all_reports = all_reports.dropna(subset=["energy_emission", "waste_emission", "travel_emission"])
+
+    all_reports['short_client_id'] = all_reports['client_id'].apply(lambda x: x[:8])
+
+    if not all_reports.empty:
+        # Bar chart for energy emissions
+        energy_chart_data = all_reports[["short_client_id", "energy_emission"]].set_index("short_client_id")
+        st.write("#### Energy Emissions Comparison")
+        st.bar_chart(energy_chart_data)
+
+        # Bar chart for waste emissions
+        waste_chart_data = all_reports[["short_client_id", "waste_emission"]].set_index("short_client_id")
+        st.write("#### Waste Emissions Comparison")
+        st.bar_chart(waste_chart_data)
+
+        # Bar chart for travel emissions
+        travel_chart_data = all_reports[["short_client_id", "travel_emission"]].set_index("short_client_id")
+        st.write("#### Travel Emissions Comparison")
+        st.bar_chart(travel_chart_data)
+        
+        #Total emissions comparison
+        total_chart_data = all_reports[["short_client_id", "total_emission"]].set_index("short_client_id")
+        st.write("#### Total Emissions Comparison")
+        st.bar_chart(total_chart_data)
+    else:
+        st.warning("No data available for comparison. Save at least one report first!")
+    
 
 if __name__ == "__main__":
     main()
