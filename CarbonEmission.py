@@ -255,7 +255,6 @@ def main():
         
     #Shorten the displayed client ID
     short_id = st.session_state["client_id"][:8]
-    st.sidebar.write(f"Your Client ID: {short_id}")
     st.title("Carbon Footprint Assessment made quick and accurate")
     st.write("Obtain the most accurate data with our carbon footprint monitotring tool, supported and develope by our commited Climate team. Our web application calcuates the carbon footprint based on the most important factors including Energy Usage, Waste and Business Travles of your company.  ")
     
@@ -349,7 +348,7 @@ def main():
 
                 travel_emission = carbon_footprint.calculate_travel_emission(travel_km, fuel_efficiency)
                 st.session_state["travel_emission"] = travel_emission 
-                st.success(f'Your carbon emission from business travels is {carbon_footprint.travel_emission:.2f} kgCO2. View the full review and solutions here. ')
+                st.success(f'Your carbon emission from business travels is {carbon_footprint.travel_emission:.2f} kgCO2. ')
         
                 #benchmark comparison
                 travel_benchmark = 76100
@@ -371,7 +370,7 @@ def main():
     total_emission = carbon_footprint.calculate_total_emission()
     st.session_state["total_emission"] = total_emission  # Store total emission
     
-    if st.button("Total Emission Overview"):
+    if st.button("Total Emission Overview and Report- Click twice"):
         # Validate inputs
         if not all([st.session_state.get("energy_emission"), st.session_state.get("waste_emission"), st.session_state.get("travel_emission")]):
             st.error("Please fill in all fields.")
